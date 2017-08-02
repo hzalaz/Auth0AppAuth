@@ -20,31 +20,29 @@ class ViewController: UIViewController {
     @IBAction func start(_ sender: Any) {
         let baseUrl = URL(string: "https://\(auth0.domain)")!
 
-        let authorize = URL(string: "/authorize", relativeTo: baseUrl)?.absoluteURL
-        let token = URL(string: "/oauth/token", relativeTo: baseUrl)?.absoluteURL
-        let configuration = OIDServiceConfiguration(authorizationEndpoint: authorize!, tokenEndpoint: token!)
+        OIDAuthorizationService .discoverConfiguration(forIssuer: baseUrl) { (configuration, error) in
+            let additionalParameters = ["audience": "https://overmind.auth0.com/api/v2/"]
+            let request = OIDAuthorizationRequest(configuration: configuration!, clientId: self.auth0.clientId, scopes: [OIDScopeOpenID, OIDScopeProfile], redirectURL: URL(string: self.auth0.redirectUri)!, responseType: OIDResponseTypeCode, additionalParameters: additionalParameters)
+            let session = OIDAuthState.authState(byPresenting: request, presenting: self) { [weak self] (state, error) in
+                if let error = error {
+                    let alert = UIAlertController(title: "Failed to auth", message: error.localizedDescription, preferredStyle: .alert)
+                    alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+                    self?.present(alert, animated: true, completion: nil)
+                    return
+                }
+                guard let state = state else {
+                    let alert = UIAlertController(title: "Failed to auth", message: "No Auth State", preferredStyle: .alert)
+                    alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+                    self?.present(alert, animated: true, completion: nil)
+                    return
+                }
 
-        let additionalParameters = ["audience": "https://overmind.auth0.com/api/v2/"]
-        let request = OIDAuthorizationRequest(configuration: configuration, clientId: auth0.clientId, scopes: [OIDScopeOpenID, OIDScopeProfile], redirectURL: URL(string: auth0.redirectUri)!, responseType: OIDResponseTypeCode, additionalParameters: additionalParameters)
-        let session = OIDAuthState.authState(byPresenting: request, presenting: self) { [weak self] (state, error) in
-            if let error = error {
-                let alert = UIAlertController(title: "Failed to auth", message: error.localizedDescription, preferredStyle: .alert)
+                let alert = UIAlertController(title: "Auth Completed", message: "Obtained \(state.lastTokenResponse?.idToken ?? "<NO ID_TOKEN>")", preferredStyle: .alert)
                 alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
                 self?.present(alert, animated: true, completion: nil)
-                return
             }
-            guard let state = state else {
-                let alert = UIAlertController(title: "Failed to auth", message: "No Auth State", preferredStyle: .alert)
-                alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
-                self?.present(alert, animated: true, completion: nil)
-                return
-            }
-
-            let alert = UIAlertController(title: "Auth Completed", message: "Obtained \(state.lastTokenResponse?.idToken ?? "<NO ID_TOKEN>")", preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
-            self?.present(alert, animated: true, completion: nil)
+            SessionManager.shared.current = session
         }
-        SessionManager.shared.current = session
     }
 }
 

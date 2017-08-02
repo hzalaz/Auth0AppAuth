@@ -23,8 +23,9 @@ class ViewController: UIViewController {
         let authorize = URL(string: "/authorize", relativeTo: baseUrl)?.absoluteURL
         let token = URL(string: "/oauth/token", relativeTo: baseUrl)?.absoluteURL
         let configuration = OIDServiceConfiguration(authorizationEndpoint: authorize!, tokenEndpoint: token!)
-        
-        let request = OIDAuthorizationRequest(configuration: configuration, clientId: auth0.clientId, scopes: [OIDScopeOpenID, OIDScopeProfile], redirectURL: URL(string: auth0.redirectUri)!, responseType: OIDResponseTypeCode, additionalParameters: nil)
+
+        let additionalParameters = ["audience": "https://overmind.auth0.com/api/v2/"]
+        let request = OIDAuthorizationRequest(configuration: configuration, clientId: auth0.clientId, scopes: [OIDScopeOpenID, OIDScopeProfile], redirectURL: URL(string: auth0.redirectUri)!, responseType: OIDResponseTypeCode, additionalParameters: additionalParameters)
         let session = OIDAuthState.authState(byPresenting: request, presenting: self) { [weak self] (state, error) in
             if let error = error {
                 let alert = UIAlertController(title: "Failed to auth", message: error.localizedDescription, preferredStyle: .alert)
